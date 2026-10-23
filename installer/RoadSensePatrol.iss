@@ -1,5 +1,5 @@
 #define AppName "RoadSense Patrol"
-#define AppVersion "0.7.1"
+#define AppVersion "0.7.2"
 #ifndef GamePublishDir
 #define GamePublishDir "..\publish"
 #endif

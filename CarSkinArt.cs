@@ -43,7 +43,9 @@ internal sealed class CarSkinArt : IDisposable
             }
             display[i] = bitmap;
             driving[i] = (Bitmap)bitmap.Clone();
-            driving[i].RotateFlip(RotateFlipType.Rotate180FlipNone);
+            // Doc's supplied art is already upright for the road view; rotating it
+            // turns the roof number and body upside down in gameplay.
+            if (i != 2) driving[i].RotateFlip(RotateFlipType.Rotate180FlipNone);
         }
     }
 

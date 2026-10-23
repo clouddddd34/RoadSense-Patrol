@@ -109,7 +109,7 @@ using (var inputForm = new GameForm())
         throw new Exception("The King selection must load the first crash scene");
 }
 using var form = new GameForm();
-if (!form.Text.Contains("v0.7.1")) throw new Exception("Window title must identify the build being tested");
+if (!form.Text.Contains("v0.7.2")) throw new Exception("Window title must identify the build being tested");
 var model = (GameModel)typeof(GameForm).GetField("game", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
 void Save(string name)
 {
@@ -154,6 +154,9 @@ Save("lane-transition.png");
 model.Start();
 for (int i = 0; i < 12 * 60; i++) model.Update(1f / 60f);
 Save("gameplay.png");
+typeof(GameForm).GetField("selectedCar", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(form, 2);
+Save("doc-hudson-road.png");
+typeof(GameForm).GetField("selectedCar", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(form, 1);
 model.ScanHeld = true;
 for (int i = 0; i < 30; i++) model.Update(1f / 60f);
 model.ScanHeld = false;
