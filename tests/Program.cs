@@ -251,8 +251,11 @@ var boardDir = Path.Combine(Path.GetTempPath(), "RoadSensePatrolTests", Guid.New
 var board = new LeaderboardStore(boardDir);
 board.Add("bob", 3000);
 board.Add("ace", 4000);
-Check(new LeaderboardStore(boardDir).Entries.Select(e => e.Name).SequenceEqual(["ACE", "BOB"]),
-    "leaderboard persists and sorts scores");
+board.Add("Sebastian Penaranda", 5000);
+board.Add("ABCDEFGHIJKLMNOPQRSTUVW", 2000);
+Check(new LeaderboardStore(boardDir).Entries.Select(e => e.Name).SequenceEqual(
+    ["Sebastian Penaranda", "ace", "bob", "ABCDEFGHIJKLMNOPQRST"]),
+    "leaderboard preserves names, older initials, and the 20-character limit");
 File.WriteAllText(Path.Combine(boardDir, "leaderboard.json"), "corrupt json");
 Check(new LeaderboardStore(boardDir).Entries.Count == 0, "corrupt leaderboard is handled");
 Directory.Delete(boardDir, true);

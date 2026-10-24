@@ -28,7 +28,7 @@ public sealed class GameForm : Form
     private int selectedCar = 1;
     private MenuPage menuPage = MenuPage.Home;
     private PointF pointer = new(-100, -100);
-    private string typedInitials = "";
+    private string typedName = "";
     private float shake;
 
     [DllImport("user32.dll")]
@@ -51,6 +51,7 @@ public sealed class GameForm : Form
         KeyPreview = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
         KeyDown += OnKeyDown;
+        KeyPress += OnKeyPress;
         KeyUp += OnKeyUp;
         MouseDown += OnMouseDown;
         MouseUp += OnMouseUp;
@@ -153,15 +154,11 @@ public sealed class GameForm : Form
         if (game.Phase == GamePhase.Results)
         {
             game.TouchResults();
-            if (!scoreSubmitted && board.Qualifies(game.Score) && !e.Control && !e.Alt &&
-                e.KeyCode is >= Keys.A and <= Keys.Z && typedInitials.Length < 3)
-            {
-                typedInitials += (char)('A' + (e.KeyCode - Keys.A));
-            }
-            else if (e.KeyCode == Keys.Back && typedInitials.Length > 0 && !scoreSubmitted)
-                typedInitials = typedInitials[..^1];
+            if (e.KeyCode == Keys.Back && typedName.Length > 0 && !scoreSubmitted)
+                typedName = typedName[..^1];
             else if (e.KeyCode == Keys.Enter && !scoreSubmitted && board.Qualifies(game.Score)) SubmitScore();
-            else if (e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter && scoreSubmitted) StartGame();
+            else if ((e.KeyCode is Keys.Space or Keys.Enter) &&
+                (scoreSubmitted || !board.Qualifies(game.Score))) StartGame();
             return;
         }
         if (game.Phase != GamePhase.Playing) return;
@@ -171,6 +168,20 @@ public sealed class GameForm : Form
         if (e.KeyCode is Keys.S or Keys.Down) game.SetBrake(true);
         if (e.KeyCode == Keys.B) game.ScanHeld = true;
         if (e.KeyCode is Keys.W or Keys.Up) game.PressBoost();
+    }
+
+    private void OnKeyPress(object? sender, KeyPressEventArgs e)
+    {
+        if (game.Phase != GamePhase.Results || menuOpen || selectingCar || scoreSubmitted ||
+            !board.Qualifies(game.Score)) return;
+        if (typedName.Length >= LeaderboardStore.MaxNameLength) return;
+        char character = e.KeyChar;
+        if (char.IsLetterOrDigit(character) || character is ' ' or '-' or '\'' or '.')
+        {
+            typedName += character;
+            game.TouchResults();
+            e.Handled = true;
+        }
     }
 
     private void OnKeyUp(object? sender, KeyEventArgs e)
@@ -218,7 +229,7 @@ public sealed class GameForm : Form
             game.TouchResults();
             if (!scoreSubmitted && board.Qualifies(game.Score))
             {
-                if (p.Y >= 545 && p.Y <= 605 && p.X >= 400 && p.X <= 800) { Focus(); return; }
+                if (p.Y >= 545 && p.Y <= 605 && p.X >= 350 && p.X <= 850) { Focus(); return; }
                 if (p.Y >= 620 && p.Y <= 680 && p.X >= 480 && p.X <= 720) { SubmitScore(); return; }
             }
             StartGame(); return;
@@ -255,7 +266,7 @@ public sealed class GameForm : Form
         game.SetCrashSceneDuration(crashScene.ClipDurationSeconds);
         selectingCar = false;
         scoreSubmitted = false;
-        typedInitials = "";
+        typedName = "";
         game.Start();
     }
 
@@ -269,8 +280,8 @@ public sealed class GameForm : Form
     private void SubmitScore(bool automatic = false)
     {
         if (scoreSubmitted) return;
-        if (!automatic && typedInitials.Length != 3) return;
-        board.Add(typedInitials.Length == 3 ? typedInitials : "AAA", game.Score);
+        if (!automatic && string.IsNullOrWhiteSpace(typedName)) return;
+        board.Add(typedName, game.Score);
         scoreSubmitted = true;
         audio.Play("results");
     }
@@ -900,7 +911,7 @@ public sealed class GameForm : Form
                 if (i < board.Entries.Count)
                 {
                     DrawText(g, $"{i + 1:00}", 15, i == 0 ? Amber : Muted, 270, y, style: FontStyle.Bold);
-                    DrawText(g, board.Entries[i].Name, 15, White, 350, y, style: FontStyle.Bold);
+                    DrawText(g, board.Entries[i].Name, 15, White, 350, y, style: FontStyle.Bold, width: 430);
                     DrawText(g, board.Entries[i].Score.ToString("N0"), 15, Cyan, 900, y, true, false, FontStyle.Bold);
                 }
                 else DrawText(g, $"{i + 1:00}     —", 14, Muted, 270, y);
@@ -965,8 +976,9 @@ public sealed class GameForm : Form
         for (int i = 0; i < Math.Min(10, board.Entries.Count); i++)
         {
             var entry = board.Entries[i];
-            DrawText(g, $"{i + 1:00} {entry.Name}", 14, White, 1016, 75 + i * 28);
-            DrawText(g, entry.Score.ToString("N0"), 14, Cyan, 1156, 75 + i * 28, true);
+            DrawText(g, $"{i + 1:00}", 12, Muted, 1016, 75 + i * 28, style: FontStyle.Bold, width: 25);
+            DrawText(g, entry.Name, 12, White, 1042, 75 + i * 28, width: 88);
+            DrawText(g, entry.Score.ToString("N0"), 12, Cyan, 1132, 75 + i * 28, width: 65);
         }
         if (board.Entries.Count == 0) DrawText(g, "Your name could be here!", 13, Muted, 1016, 90, width: 165);
         DrawText(g, "RANK LADDER", 16, Teal, 1016, 427, style: FontStyle.Bold);
@@ -1054,16 +1066,18 @@ public sealed class GameForm : Form
 
         if (!scoreSubmitted && board.Qualifies(game.Score))
         {
-            DrawText(g, "TOP 10! TYPE THREE LETTERS", 16, Green, 600, 521, true, true, FontStyle.Bold);
-            for (int i = 0; i < 3; i++)
-            {
-                float x = 510 + i * 90;
-                FillRound(g, i == typedInitials.Length ? Teal : Panel, x - 37, 547, 74, 58, 8);
-                string letter = i < typedInitials.Length ? typedInitials[i].ToString() : "_";
-                DrawText(g, letter, 31, White, x, 576, true, true, FontStyle.Bold);
-            }
-            DrawText(g, "BACKSPACE TO EDIT", 13, Muted, 600, 611, true, true);
-            FillRound(g, typedInitials.Length == 3 ? Green : Border, 480, 625, 240, 55, 10);
+            DrawText(g, "TOP 10! ENTER YOUR NAME", 16, Green, 600, 521, true, true, FontStyle.Bold);
+            FillRound(g, Panel, 350, 545, 500, 60, 10);
+            using (var outline = new Pen(Teal, 2)) g.DrawRectangle(outline, 351, 546, 498, 58);
+            using (var font = new Font("Segoe UI", 23, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (var brush = new SolidBrush(typedName.Length > 0 ? White : Muted))
+            using (var format = new StringFormat { FormatFlags = StringFormatFlags.NoWrap,
+                Trimming = StringTrimming.EllipsisCharacter, LineAlignment = StringAlignment.Center })
+                g.DrawString(typedName.Length > 0 ? typedName : "Type your name", font, brush,
+                    new RectangleF(370, 550, 460, 50), format);
+            DrawText(g, $"{typedName.Length}/{LeaderboardStore.MaxNameLength} CHARACTERS  •  BACKSPACE TO EDIT",
+                12, Muted, 600, 612, true, true);
+            FillRound(g, !string.IsNullOrWhiteSpace(typedName) ? Green : Border, 480, 625, 240, 55, 10);
             DrawText(g, "SAVE SCORE", 18, White, 600, 649, true, true, FontStyle.Bold);
         }
         else

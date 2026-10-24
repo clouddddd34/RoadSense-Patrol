@@ -66,7 +66,7 @@ RoadSense Patrol is released under the [MIT License](LICENSE).
 | Fullscreen | F11 | — |
 | Quit | Ctrl+Shift+Q | — |
 
-On the results screen, type three letters and press Enter or click **SAVE SCORE** to save a qualifying Top 10 score. Backspace edits the entry. The game returns to the attract screen after 20 seconds. Qualifying scores not entered before timeout are saved as `AAA`.
+On the results screen, type a name of up to 20 characters and press Enter or click **SAVE SCORE** to save a qualifying Top 10 score. Letters, numbers, spaces, hyphens, apostrophes, and periods are supported. Backspace edits the entry. The game returns to the attract screen after 20 seconds. Qualifying scores left blank at timeout are saved as `PLAYER`. Existing three-letter scores remain on the board.
 
 Hidden booth admin shortcut: **Ctrl+Shift+R** opens a confirmation to clear local scores. Scores are stored in `%LOCALAPPDATA%\RoadSensePatrol\leaderboard.json` and survive restarts. A missing or invalid leaderboard file starts with an empty board.
 
